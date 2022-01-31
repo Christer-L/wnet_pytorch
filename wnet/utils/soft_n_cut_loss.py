@@ -201,3 +201,46 @@ class NCutLoss2D(nn.Module):
             loss += nn.L1Loss()(numerator / torch.add(denominator, 1e-6), torch.zeros_like(numerator))
 
         return num_classes - loss
+
+
+class NCutLossOptimized(nn.Module):
+    r"""Implementation of the continuous N-Cut loss, as in:
+    'W-Net: A Deep Model for Fully Unsupervised Image Segmentation', by Xia, Kulis (2017)"""
+
+    def __init__(self, radius: int = 5, sigma_1: float = 4, sigma_2: float = 10):
+        r"""
+        :param radius: Radius of the spatial interaction term
+        :param sigma_1: Standard deviation of the spatial Gaussian interaction
+        :param sigma_2: Standard deviation of the pixel value Gaussian interaction
+        """
+        super(NCutLossOptimized, self).__init__()
+        self.radius = radius
+        self.sigma_1 = sigma_1  # Spatial standard deviation
+        self.sigma_2 = sigma_2  # Pixel value standard deviation
+
+    def forward(self, inputs: Tensor, labels: Tensor, weights: Tensor) -> Tensor:
+        r"""Computes the continuous N-Cut loss, given a set of class probabilities (labels) and raw images (inputs).
+        Small modifications have been made here for efficiency -- specifically, we compute the pixel-wise weights
+        relative to the class-wide average, rather than for every individual pixel.
+        :param labels: Predicted class probabilities
+        :param inputs: Raw images
+        :return: Continuous N-Cut loss
+        """
+        num_classes = labels.shape[1]
+        loss = 0
+
+        for k in range(num_classes):
+            # Compute the average pixel value for this class, and the difference from each pixel
+            region_size = 2*[2*self.radius+1]
+            class_probs = labels[:, k].unsqueeze(1).cuda()
+
+            unfold = torch.nn.Unfold(region_size, padding=self.radius)
+            unflatten = torch.nn.Unflatten(1, region_size)
+
+            P = unflatten(unfold(class_probs.cuda())).permute(0,3,1,2).cuda()
+            L = torch.matmul(class_probs.flatten().cuda(), torch.sum(weights.cuda() * P, dim=(2,3)).cuda().t())/ \
+                torch.matmul(class_probs.flatten().cuda(), torch.sum(weights, dim=(2,3)).cuda().t())
+            loss += nn.L1Loss()(L, torch.zeros_like(L))
+        return num_classes - loss
+
+

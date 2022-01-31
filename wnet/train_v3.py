@@ -13,7 +13,7 @@ import torch.optim as optim
 from wnet.models import residual_wnet, wnet
 from wnet.utils import data, soft_n_cut_loss, ssim, utils
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # widget list for the progress bar
 widgets = [
@@ -26,11 +26,7 @@ widgets = [
     ") ",
 ]
 
-if os.uname()[1] == "iss":
-    BASE_PATH = "/home/edgar/Documents/Datasets/JB/new_images/"
-else:
-    BASE_PATH = "/home/elefevre/Datasets/JB/new_images/"
-
+BASE_PATH = r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\\"
 SAVE_PATH = "saved_models/net.pth"
 LOSS = np.inf
 
@@ -41,6 +37,11 @@ def save_model(net, loss):
         LOSS = loss
         torch.save(net.state_dict(), SAVE_PATH)
 
+# def get_weight_paths(img_paths):
+#     filenames = [os.path.basename(os.path.splitext(os.path.normpath(fname))[0]) for fname in img_paths]
+#     return [r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\weights\{}.pt".format(path)
+#             for path in filenames]
+
 
 def get_datasets(path_img, config):
     img_path_list = utils.list_files_path(path_img)
@@ -49,8 +50,8 @@ def get_datasets(path_img, config):
     img_train, img_val = sk.train_test_split(
         img_path_list, test_size=0.2, random_state=42
     )
-    dataset_train = data.Unsupervised_dataset(config.batch_size, config.size, img_train)
-    dataset_val = data.Unsupervised_dataset(config.batch_size, config.size, img_val)
+    dataset_train = data.Unsupervised_dataset(config.batch_size, config.size, img_train, radius=5)
+    dataset_val = data.Unsupervised_dataset(config.batch_size, config.size, img_val, radius=5)
     return dataset_train, dataset_val
 
 
@@ -63,11 +64,13 @@ def _step(net, step, dataset, optim, glob_loss, epoch, config):
     with progressbar.ProgressBar(max_value=len(dataset), widgets=widgets) as bar:
         for i in range(len(dataset)):  # boucle inf si on ne fait pas comme ça
             bar.update(i)
-            imgs = dataset[i].cuda()
+            # Added weights
+            imgs, weights = dataset[i]
+            #weights.cuda()
             if step == "Train":
                 optim.zero_grad()
             recons, mask = net.forward(imgs)
-            loss = glob_loss(imgs, mask, recons)
+            loss = glob_loss(imgs, mask, weights, recons)
             if step == "Train":
                 # loss = loss_enc + loss_recons
                 loss.backward()
@@ -75,16 +78,16 @@ def _step(net, step, dataset, optim, glob_loss, epoch, config):
             _enc_loss.append(loss.item())
             _recons_loss.append(loss.item())
             if step == "Validation" and (epoch + 1) == config.epochs:
-                utils.visualize(net, imgs, epoch + 1, i, config, path="data/results/")
+                utils.visualize(net, imgs, epoch + 1, i, config, path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\\")
     return _enc_loss, _recons_loss
 
 
-def global_loss(imgs, masks, recons):
+def global_loss(imgs, masks, weights, recons):
     mse = nn.MSELoss()
     # bce = nn.BCEWithLogitsLoss()
     ssim_loss = ssim.ssim
-    ncut = soft_n_cut_loss.NCutLoss2D()
-    return ncut(imgs, masks) + mse(recons, imgs)
+    ncut = soft_n_cut_loss.NCutLossOptimized()
+    return ncut(imgs, masks, weights) + mse(recons.cuda(), imgs.cuda())
 
 
 def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
@@ -126,14 +129,15 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
             )
         scheduler.step()
     utils.learning_curves(
-        epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val
+        epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,
+    path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\plot.png"
     )
 
 
 if __name__ == "__main__":
     args = utils.get_args()
     train(
-        BASE_PATH + "patches_tries/",
+        BASE_PATH + "patches_tries\\",
         config=args,
         epochs=args.epochs,
     )

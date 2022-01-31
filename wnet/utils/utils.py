@@ -130,7 +130,7 @@ def get_args():
     )
     parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
     parser.add_argument(
-        "--size", type=int, default=512, help="Size of the image, one number"
+        "--size", type=int, default=256, help="Size of the image, one number"
     )
     parser.add_argument("--drop_r", "-d", type=float, default=0.2, help="Dropout rate")
     parser.add_argument(
