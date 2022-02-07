@@ -78,7 +78,8 @@ def _step(net, step, dataset, optim, glob_loss, epoch, config):
             _enc_loss.append(loss.item())
             _recons_loss.append(loss.item())
             if step == "Validation" and (epoch + 1) == config.epochs:
-                utils.visualize(net, imgs, epoch + 1, i, config, path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\\")
+                utils.visualize(net, imgs, epoch + 1, i, config,
+                                path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\\")
     return _enc_loss, _recons_loss
 
 
@@ -130,7 +131,7 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
         scheduler.step()
     utils.learning_curves(
         epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,
-    path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\plot.png"
+        path=r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\data\results\plot.png"
     )
 
 
@@ -140,4 +141,4 @@ if __name__ == "__main__":
         BASE_PATH + "patches_tries\\",
         config=args,
         epochs=args.epochs,
-    )
+        )
