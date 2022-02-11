@@ -138,3 +138,8 @@ saved_models/*
 shared/
 shared_Edgar/
 weights/
+
+
+# Other
+notebooks/
+experiments/
