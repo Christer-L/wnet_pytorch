@@ -127,7 +127,6 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
                     np.array(_enc_loss).mean(), np.array(_recons_loss).mean()
                 )
             )
-        scheduler.step()
     utils.learning_curves(
         epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,
         path=os.path.join(BASE_PATH, "/data/results/plot.png")
