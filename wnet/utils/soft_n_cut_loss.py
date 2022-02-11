@@ -188,7 +188,7 @@ class NCutLoss2D(nn.Module):
 
         for k in range(num_classes):
             # Compute the average pixel value for this class, and the difference from each pixel
-            class_probs = labels[:, k].unsqueeze(1)
+            class_probs = labels[:, k, :, :].unsqueeze(1)
             class_mean = torch.mean(inputs * class_probs, dim=(2, 3), keepdim=True) / \
                          torch.add(torch.mean(class_probs, dim=(2, 3), keepdim=True), 1e-5)
             diff = (inputs - class_mean).pow(2).sum(dim=1).unsqueeze(1)
@@ -229,12 +229,14 @@ class NCutLossOptimized(nn.Module):
         unflatten = torch.nn.Unflatten(1, region_size)
 
         for k in range(num_classes):
-            class_probs = labels[:, k].unsqueeze(1).cuda()
-            p_f = class_probs.flatten().cuda()
+            class_probs = labels[:, k].unsqueeze(1)
+
+            p_f = class_probs.flatten(start_dim=1).cuda()
+
             P = unflatten(unfold(class_probs)).permute(0, 3, 1, 2).cuda()
 
-            L = torch.matmul(p_f, torch.sum(weights * P, dim=(2, 3)).t()) / \
-                torch.matmul(p_f, torch.sum(weights, dim=(2, 3)).t())
+            L = torch.einsum('ij,ij->i', p_f, torch.sum(weights * P, dim=(2, 3))) / \
+                torch.einsum('ij,ij->i', p_f, torch.sum(weights, dim=(2, 3)))
 
             loss += nn.L1Loss()(L, torch.zeros_like(L))
         return num_classes - loss
