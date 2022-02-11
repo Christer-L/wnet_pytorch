@@ -222,7 +222,7 @@ class NCutLossOptimized(nn.Module):
         :return: Continuous N-Cut loss
         """
         num_classes = labels.shape[1]
-        loss = 0
+        losses = []
 
         region_size = 2*[2*self.radius+1]
         unfold = torch.nn.Unfold(region_size, padding=self.radius)
@@ -238,7 +238,7 @@ class NCutLossOptimized(nn.Module):
             L = torch.einsum('ij,ij->i', p_f, torch.sum(weights * P, dim=(2, 3))) / \
                 torch.einsum('ij,ij->i', p_f, torch.sum(weights, dim=(2, 3)))
 
-            loss += nn.L1Loss()(L, torch.zeros_like(L))
-        return num_classes - loss
+            losses.append(nn.L1Loss()(L, torch.zeros_like(L)))
+        return num_classes - sum(losses)
 
 

@@ -136,7 +136,11 @@ class WnetSep_v2(nn.Module):
         self.u_enc = nn.DataParallel(Unet_Sep_v2(filters, 1, 2, drop_r, sig=True))
         self.u_dec = nn.DataParallel(Unet_Sep_v2(filters, 2, 1, drop_r))
 
-    def forward(self, x):
+    def enc_forward(self, x):
         mask = self.u_enc(x)
-        reconstruction = self.u_dec(mask)
-        return reconstruction, mask
+        return mask
+    
+    def dec_forward(self, x):
+        x = self.u_enc(x)
+        reconstruction = self.u_dec(x)
+        return reconstruction
