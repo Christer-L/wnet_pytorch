@@ -55,7 +55,8 @@ class Unsupervised_dataset(Dataset):
         x = np.zeros((self.batch_size, 1, self.img_size, self.img_size), dtype="float32")
 
         # Weights tensor
-        w = np.zeros((self.batch_size, self.img_size**2, 2*self.radius + 1, 2*self.radius+1), dtype="float32")
+        # TODO: Check later
+        w = Torch.zeros((self.batch_size, self.img_size**2, 2*self.radius + 1, 2*self.radius+1))
 
         # Load individual images and weights into batch
         for j, path in enumerate(batch_input_img_paths):

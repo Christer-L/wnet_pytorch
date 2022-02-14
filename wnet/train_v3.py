@@ -12,7 +12,9 @@ import torch.optim as optim
 
 from wnet.models import residual_wnet, wnet
 from wnet.utils import data, soft_n_cut_loss, ssim, utils
+
 torch.autograd.set_detect_anomaly(True)
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 # widget list for the progress bar
@@ -37,11 +39,6 @@ def save_model(net, loss):
         LOSS = loss
         torch.save(net.state_dict(), SAVE_PATH)
 
-# def get_weight_paths(img_paths):
-#     filenames = [os.path.basename(os.path.splitext(os.path.normpath(fname))[0]) for fname in img_paths]
-#     return [r"C:\Users\clohk\Desktop\Projects\WNet\wnet_pytorch\weights\{}.pt".format(path)
-#             for path in filenames]
-
 
 def get_datasets(path_img, config):
     img_path_list = utils.list_files_path(path_img)
@@ -55,7 +52,7 @@ def get_datasets(path_img, config):
     return dataset_train, dataset_val
 
 
-def _step(net, step, dataset, optim_enc, optim_dec, epoch, config):
+def _step(net, step, dataset, optim_enc, optim_glob, epoch, config):
     _enc_loss, _recons_loss = [], []
     if step == "Train":
         net.train()
@@ -68,23 +65,22 @@ def _step(net, step, dataset, optim_enc, optim_dec, epoch, config):
             imgs, weights = dataset[i]
             if step == "Train":
                 optim_enc.zero_grad()
-                optim_dec.zero_grad()
+                optim_glob.zero_grad()
             mask = net.enc_forward(imgs)
             enc_loss = ncut_loss(mask, weights)
             if step == "Train":
-                # loss = loss_enc + loss_recons
                 enc_loss.backward(retain_graph=True)
                 optim_enc.step()
-            recons = net.dec_forward(imgs)
-            dec_loss = nn.MSELoss()(imgs.cuda(), recons.cuda())
+            mask, recons = net.forward(imgs)
+            glob_loss = nn.MSELoss()(imgs.cuda(), recons.cuda())
             if step == "Train":
-                dec_loss.backward()
-                optim_dec.step()
+                glob_loss.backward()
+                optim_glob.step()
             _enc_loss.append(enc_loss.item())
-            _recons_loss.append(dec_loss.item())
+            _recons_loss.append(glob_loss.item())
             if step == "Validation" and (epoch + 1) == config.epochs:
                 utils.visualize(net, imgs, epoch + 1, i, config,
-                                path=os.path.join(BASE_PATH, "data/results/"))
+                                path=os.path.join(BASE_PATH, "data", "results"))
     return _enc_loss, _recons_loss
 
 
@@ -97,7 +93,7 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
     net = wnet.WnetSep_v2(filters=config.filters, drop_r=config.drop_r).cuda()
     # net = residual_wnet.Wnet_Seppreact(filters=config.filters, drop_r=config.drop_r).cuda()
     optimizer_enc = optim.Adam(net.u_enc.parameters(), lr=config.lr)
-    optimizer_dec = optim.Adam(net.parameters(), lr=config.lr)
+    optimizer_glob = optim.Adam(net.parameters(), lr=config.lr)
     #  get dataset
     dataset_train, dataset_val = get_datasets(path_imgs, config)
     epoch_enc_train = []
@@ -113,7 +109,7 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
             utils.print_gre(step+":")
             dataset = dataset_train if step == "Train" else dataset_val
             _enc_loss, _recons_loss = _step(
-                net, step, dataset, optimizer_enc, optimizer_dec, epoch, config
+                net, step, dataset, optimizer_enc, optimizer_glob, epoch, config
             )
             if step == "Train":
                 epoch_enc_train.append(np.array(_enc_loss).mean())
@@ -129,7 +125,7 @@ def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
             )
     utils.learning_curves(
         epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,
-        path=os.path.join(BASE_PATH, "/data/results/plot.png")
+        path=BASE_PATH + "data/plot.png"
     )
 
 

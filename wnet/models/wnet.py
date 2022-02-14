@@ -140,7 +140,7 @@ class WnetSep_v2(nn.Module):
         mask = self.u_enc(x)
         return mask
     
-    def dec_forward(self, x):
-        x = self.u_enc(x)
-        reconstruction = self.u_dec(x)
-        return reconstruction
+    def forward(self, x):
+        mask = self.enc_forward(x)
+        reconstruction = self.u_dec(mask)
+        return mask, reconstruction

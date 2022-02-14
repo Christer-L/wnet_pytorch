@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+BASE_PATH = "/home/clohk/wnet_pytorch/"
+
 
 def list_files_path(path):
     """
@@ -96,7 +98,7 @@ def sorted_alphanumeric(data):
     return sorted(data, key=alphanum_key)
 
 
-def learning_curves(train_enc, train_recons, val_enc, val_recons, path="data/plot.png"):
+def learning_curves(train_enc, train_recons, val_enc, val_recons, path=BASE_PATH + "data/plot.png"):
     fig = plt.figure(figsize=(15, 10))
     ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
     fig.suptitle("Training Curves")
@@ -145,7 +147,7 @@ def get_args():
     return args
 
 
-def visualize_att(net, image, k, opt, path="data/results/"):
+def visualize_att(net, image, k, opt, path=BASE_PATH + "data/results/"):
     if k % 2 == 0 or k == 1:
         mask, att = net.forward_enc(image)
         output = net.forward(image)
@@ -194,9 +196,9 @@ def plot_images_att(imgs, pred, att, output, k, size, path):
     plt.close()
 
 
-def visualize(net, image, k, i, opt, path="data/results/"):
+def visualize(net, image, k, i, opt, path=BASE_PATH + "data/results/"):
     # mask = net.forward_enc(image)
-    output, mask = net.forward(image)
+    mask, output = net.forward(image)
     image = (image.cpu().numpy() * 255).astype(np.uint8).reshape(-1, opt.size, opt.size)
     argmax = mask.argmax(dim=1)  # mask > 0.5
     pred, output = (
@@ -231,5 +233,5 @@ def plot_images(imgs, pred, output, k, nb, size, path):
         i += 3
         if i >= 15:
             break
-    plt.savefig(path + "epoch_" + str(k) + "_{}_.png".format(nb))
+    plt.savefig(path + "/epoch_" + str(k) + "_{}_.png".format(nb))
     plt.close()
