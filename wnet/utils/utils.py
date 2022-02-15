@@ -135,6 +135,8 @@ def get_args():
         "--size", type=int, default=512, help="Size of the image, one number"
     )
     parser.add_argument("--drop_r", "-d", type=float, default=0.2, help="Dropout rate")
+    parser.add_argument("--classes", "-c", type=int, default=2, help="Number of classes in the latent space")
+    parser.add_argument("--radius", "-r", type=int, default=5, help="Radius of n-cut-loss")
     parser.add_argument(
         "--filters",
         "-f",

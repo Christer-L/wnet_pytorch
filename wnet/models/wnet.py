@@ -131,10 +131,10 @@ class WnetSep(nn.Module):
 
 
 class WnetSep_v2(nn.Module):
-    def __init__(self, filters, drop_r=0.3):
+    def __init__(self, filters, n_classes=2, drop_r=0.3):
         super(WnetSep_v2, self).__init__()
-        self.u_enc = nn.DataParallel(Unet_Sep_v2(filters, 1, 2, drop_r, sig=True))
-        self.u_dec = nn.DataParallel(Unet_Sep_v2(filters, 2, 1, drop_r))
+        self.u_enc = nn.DataParallel(Unet_Sep_v2(filters, 1, n_classes, drop_r, sig=True))
+        self.u_dec = nn.DataParallel(Unet_Sep_v2(filters, n_classes, 1, drop_r))
 
     def enc_forward(self, x):
         mask = self.u_enc(x)

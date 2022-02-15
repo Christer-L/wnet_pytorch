@@ -56,12 +56,12 @@ class Unsupervised_dataset(Dataset):
 
         # Weights tensor
         # TODO: Check later
-        w = Torch.zeros((self.batch_size, self.img_size**2, 2*self.radius + 1, 2*self.radius+1))
+        w = torch.zeros((self.batch_size, self.img_size**2, 2*self.radius + 1, 2*self.radius+1))
 
         # Load individual images and weights into batch
         for j, path in enumerate(batch_input_img_paths):
             img = cv2.resize(io.imread(path), (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
             img = np.array(img) / 255
-            w[j] = torch.load(get_weight_path(path)).cpu()
+            w[j] = torch.load(get_weight_path(path))
             x[j] = np.expand_dims(img, 0)
-        return torch.Tensor(x), torch.Tensor(w)
+        return torch.Tensor(x), w

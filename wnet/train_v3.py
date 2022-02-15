@@ -47,8 +47,8 @@ def get_datasets(path_img, config):
     img_train, img_val = sk.train_test_split(
         img_path_list, test_size=0.2, random_state=42
     )
-    dataset_train = data.Unsupervised_dataset(config.batch_size, config.size, img_train, radius=5)
-    dataset_val = data.Unsupervised_dataset(config.batch_size, config.size, img_val, radius=5)
+    dataset_train = data.Unsupervised_dataset(config.batch_size, config.size, img_train, radius=config.radius)
+    dataset_val = data.Unsupervised_dataset(config.batch_size, config.size, img_val, radius=config.radius)
     return dataset_train, dataset_val
 
 
@@ -90,7 +90,7 @@ def ncut_loss(masks, weights):
 
 
 def train(path_imgs, config, epochs=5):  # todo: refactor this ugly code
-    net = wnet.WnetSep_v2(filters=config.filters, drop_r=config.drop_r).cuda()
+    net = wnet.WnetSep_v2(filters=config.filters, n_classes=config.classes, drop_r=config.drop_r).cuda()
     # net = residual_wnet.Wnet_Seppreact(filters=config.filters, drop_r=config.drop_r).cuda()
     optimizer_enc = optim.Adam(net.u_enc.parameters(), lr=config.lr)
     optimizer_glob = optim.Adam(net.parameters(), lr=config.lr)
