@@ -143,3 +143,6 @@ weights/
 # Other
 notebooks/
 experiments/
+
+# Utils
+generate-shapes/
