@@ -138,4 +138,12 @@ saved_models/*
 shared/
 shared_Edgar/
 weights/
+data/
+
+
+# Other
+notebooks/
+experiments/
+generate-shapes/
+mnist/
 
