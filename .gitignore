@@ -139,10 +139,3 @@ shared/
 shared_Edgar/
 weights/
 
-
-# Other
-notebooks/
-experiments/
-
-# Utils
-generate-shapes/
