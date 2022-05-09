@@ -144,11 +144,6 @@ data/
 # Other
 notebooks/
 experiments/
-<<<<<<< HEAD
 generate-shapes/
 mnist/
-=======
 
-# Utils
-generate-shapes/
->>>>>>> c7a7d3db0c07d5e2d83fe152ce5fdae31472748b
