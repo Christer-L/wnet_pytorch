@@ -6,15 +6,18 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 
+import time
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-IMAGE_PATH = "/home/clohk/wnet_pytorch/shared_Edgar/patches_tries/"
-WEIGHT_PATH = "/home/clohk/wnet_pytorch/weights/"
+IMAGE_PATH = "/home/clohk/wnet_pytorch/mnist"
+TEMP_PATH = "/home/clohk/wnet_pytorch/temp"
+WEIGHT_PATH = "/home/clohk/weights/wnet_weights/mnist"
 
 # Hyperparameters
 SIGMA_X2 = 4
 SIGMA_I2 = 10
-RADIUS = 5
+RADIUS = 20
 IMAGE_SHAPE = (512, 512)
 
 # Initialize height and width for sliding window to contain all pixels within the radius r.
@@ -70,8 +73,16 @@ if __name__ == '__main__':
 
     with tqdm(total=len(glob(os.path.join(IMAGE_PATH, "*")))) as pbar:
         for patch_path in glob(os.path.join(IMAGE_PATH, "*")):
+            start_processing = time.time()
             filename = os.path.basename(os.path.splitext(os.path.normpath(patch_path))[0])
             img = np.asarray(Image.open(patch_path))
-            torch.save(get_weights_tensor(torch.Tensor(img).cuda(), d, M),
-                       os.path.join(WEIGHT_PATH, "{}.pt").format(filename))
+            t_image = get_weights_tensor(torch.Tensor(img).cuda(), d, M)
+            end_processing = time.time()
+            print("Processing time: {}".format(end_processing - start_processing))
+            start_saving = time.time()
+            torch.save(t_image,
+                       os.path.join(TEMP_PATH, "{}.pt").format(filename))
+            end_saving = time.time()
+            print("Saving time: {}".format(end_saving - start_saving))
+
             pbar.update(1)

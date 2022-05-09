@@ -20,7 +20,7 @@ from wnet.utils import data, soft_n_cut_loss, ssim, utils
 # Debugging...
 torch.autograd.set_detect_anomaly(True)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 # widget list for the progress bar
 widgets = [
@@ -65,8 +65,8 @@ def get_datasets(path_img, config):
     return dataset_train, dataset_val, dataset_test
 
 
-def _step(net, step, dataset, optim_enc, optim_glob, epoch, config, ncut, test_dataset):
-    _enc_loss, _recons_loss, _dice = [], [], []
+def _step(net, step, dataset, optim_enc, epoch, config, ncut, test_dataset):
+    _enc_loss, _dice = [], []
     if step == "Train":
         net.train()
     else:
@@ -78,19 +78,13 @@ def _step(net, step, dataset, optim_enc, optim_glob, epoch, config, ncut, test_d
             imgs = dataset[i].cuda()
             if step == "Train":
                 optim_enc.zero_grad()
-                optim_glob.zero_grad()
             mask = net.enc_forward(imgs.cuda())
             enc_loss = ncut(imgs, mask)
             if step == "Train":
                 enc_loss.backward(retain_graph=True)
                 optim_enc.step()
-            mask, recons = net.forward(imgs)
-            glob_loss = nn.MSELoss()(imgs, recons.cuda())
-            if step == "Train":
-                glob_loss.backward()
-                optim_glob.step()
+
             _enc_loss.append(enc_loss.item())
-            _recons_loss.append(glob_loss.item())
 
             if step == "Validation":
                 _dice = []
@@ -117,7 +111,7 @@ def _step(net, step, dataset, optim_enc, optim_glob, epoch, config, ncut, test_d
             if step == "Validation" and (epoch + 1) == config.epochs:
                 utils.visualize(net, imgs, epoch + 1, i, config,
                                 path="/scratch/homedirs/clohk/wnet_pytorch/data/results")
-    return _enc_loss, _recons_loss, _dice
+    return _enc_loss, _dice
 
 
 def train(path_imgs, config, epochs=5):
@@ -125,7 +119,6 @@ def train(path_imgs, config, epochs=5):
     net.to('cuda:0')
 
     optimizer_enc = optim.Adam(net.u_enc.parameters(), lr=config.lr)
-    optimizer_glob = optim.Adam(net.parameters(), lr=config.lr)
 
     # Get the dataset paths.
     dataset_train, dataset_val, dataset_test = get_datasets(path_imgs, config)
@@ -145,21 +138,21 @@ def train(path_imgs, config, epochs=5):
         for step in ["Train", "Validation"]:
             utils.print_gre(step+":")
             dataset = dataset_train if step == "Train" else dataset_val
-            _enc_loss, _recons_loss, _dice = _step(
-                net, step, dataset, optimizer_enc, optimizer_glob, epoch, config, ncut, dataset_test)
+            _enc_loss, _dice = _step(
+                net, step, dataset, optimizer_enc, epoch, config, ncut, dataset_test)
             if step == "Train":
                 epoch_enc_train.append(np.array(_enc_loss).mean())
                 epoch_recons_train.append(np.array(_recons_loss).mean())
-                results = "Encoding loss: {:.9f}\t Reconstruction loss: {:.9f}".format(
-                    np.array(_enc_loss).mean(), np.array(_recons_loss).mean())
+                results = "Encoding loss: {:.9f}".format(
+                    np.array(_enc_loss).mean())
             else:
                 epoch_enc_val.append(np.array(_enc_loss).mean())
                 epoch_recons_val.append(np.array(_recons_loss).mean())
                 dice.append(np.array(_dice).mean())
-                results = "Encoding loss: {:.9f}\t Reconstruction loss: {:.9f}\t Dice: {:.6f}".format(
-                    np.array(_enc_loss).mean(), np.array(_recons_loss).mean(), np.array(_dice).mean())
+                results = "Encoding loss: {:.9f}\t Dice: {:.6f}".format(
+                    np.array(_enc_loss).mean(), np.array(_dice).mean())
 
-        utils.print_gre(results)
+            utils.print_gre(results)
 
     utils.learning_curves(
         epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,

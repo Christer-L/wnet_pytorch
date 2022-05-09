@@ -4,6 +4,8 @@ import torch.nn as nn
 
 import wnet.models.utils_model as um
 
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 
 class Unet(nn.Module):
     def __init__(self, filters, drop_r=0.5):
@@ -103,6 +105,35 @@ class Unet_Sep_v2(nn.Module):
         return self.outc(x)
 
 
+class Unet_Sep_v3(nn.Module):
+    def __init__(self, filters, in_channels, out_channels, drop_r=0.2, sig=False):
+        super(Unet_Sep_v3, self).__init__()
+
+        self.down1 = um.Down_Block_v2(in_channels, filters, drop_r)
+
+        self.down2 = um.Down_Sep_Block_v2(filters, filters * 2, drop_r)
+        self.down3 = um.Down_Sep_Block_v2(filters * 2, filters * 4, drop_r)
+
+        self.bridge = um.SepBridge_v2(filters * 4, filters * 8, drop_r)
+
+        self.up1 = um.Up_Sep_Block_v2(filters * 8, filters * 4, drop_r)
+        self.up2 = um.Up_Sep_Block_v2(filters * 4, filters * 2, drop_r)
+
+        self.up3 = um.Up_Block_v2(filters * 2, filters, drop_r)
+
+        self.outc = um.NewOutConv(filters, out_channels, drop_r, sig)
+
+    def forward(self, x):
+        c1, x1 = self.down1(x)
+        c2, x2 = self.down2(x1)
+        c3, x3 = self.down3(x2)
+        bridge = self.bridge(x3)
+        x = self.up1(bridge, c3)
+        x = self.up2(x, c2)
+        x = self.up3(x, c1)
+        return self.outc(x)
+
+
 class Wnet(nn.Module):
     def __init__(self, filters, drop_r=0.3):
         super(Wnet, self).__init__()
@@ -133,8 +164,8 @@ class WnetSep(nn.Module):
 class WnetSep_v2(nn.Module):
     def __init__(self, filters, n_classes=2, drop_r=0.3):
         super(WnetSep_v2, self).__init__()
-        self.u_enc = nn.DataParallel(Unet_Sep_v2(filters, 1, n_classes, drop_r, sig=True))
-        self.u_dec = nn.DataParallel(Unet_Sep_v2(filters, n_classes, 1, drop_r))
+        self.u_enc = nn.parallel.DataParallel(Unet_Sep_v2(filters, 1, n_classes, drop_r, sig=True))
+        self.u_dec = nn.parallel.DataParallel(Unet_Sep_v2(filters, n_classes, 1, drop_r))
 
     def enc_forward(self, x):
         mask = self.u_enc(x)

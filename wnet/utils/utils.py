@@ -98,7 +98,7 @@ def sorted_alphanumeric(data):
     return sorted(data, key=alphanum_key)
 
 
-def learning_curves(train_enc, train_recons, val_enc, val_recons, path=BASE_PATH + "data/plot.png"):
+def learning_curves(train_enc, train_recons, val_enc, val_recons, path="data/plot.png"):
     fig = plt.figure(figsize=(15, 10))
     ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
     fig.suptitle("Training Curves")
@@ -125,10 +125,10 @@ def get_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--epochs", "-e", type=int, default=100, help="number of epochs of training"
+        "--epochs", "-e", type=int, default=30, help="number of epochs of training"
     )
     parser.add_argument(
-        "--batch_size", "-bs", type=int, default=2, help="size of the batches"
+        "--batch_size", "-bs", type=int, default=1, help="size of the batches"
     )
     parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
     parser.add_argument(
@@ -136,7 +136,7 @@ def get_args():
     )
     parser.add_argument("--drop_r", "-d", type=float, default=0.2, help="Dropout rate")
     parser.add_argument("--classes", "-c", type=int, default=2, help="Number of classes in the latent space")
-    parser.add_argument("--radius", "-r", type=int, default=5, help="Radius of n-cut-loss")
+    parser.add_argument("--radius", "-r", type=int, default=25, help="Radius of n-cut-loss")
     parser.add_argument(
         "--filters",
         "-f",
