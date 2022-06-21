@@ -33,7 +33,8 @@ widgets = [
     ") ",
 ]
 
-BASE_PATH = "/scratch/homedirs/clohk/Data_Eduardo/cell/patched/" # "/scratch/homedirs/clohk/wnet_pytorch/images/JPEGImages/"   "  
+BASE_PATH = "/scratch/homedirs/clohk/Data_Eduardo/cell/patched/" 
+# "/scratch/homedirs/clohk/wnet_pytorch/images/JPEGImages/"   "  
 
 SAVE_PATH = "saved_models/net.pth"
 
@@ -51,7 +52,7 @@ def get_datasets(path_img, config):
     img_path_list = utils.shuffle_list(img_path_list)
     # not good if we need to do metrics
     img_train, img_val = sk.train_test_split(
-        img_path_list, test_size=0.2, random_state=42
+        img_path_list, test_size=0.2, random_state=40
     )
 
     #img_test_dir = "/scratch/homedirs/clohk/weights/wnet_weights/Data_Eduardo/cell/test_set/Images"
@@ -81,11 +82,12 @@ def _step(net, step, dataset, optim_enc, optim_glob, epoch, config, ncut):
             mask = net.enc_forward(imgs.cuda())
             enc_loss = ncut(imgs, mask)
             if step == "Train":
-                enc_loss.backward(retain_graph=True)
+                enc_loss.backward()
                 optim_enc.step()
             mask, recons = net.forward(imgs)
             glob_loss = nn.MSELoss(reduction='sum')(imgs, recons.cuda())
             if step == "Train":
+                optim_enc.zero_grad()
                 glob_loss.backward()
                 optim_glob.step()
             _enc_loss.append(enc_loss.item())
@@ -93,7 +95,7 @@ def _step(net, step, dataset, optim_enc, optim_glob, epoch, config, ncut):
 
             if step == "Validation" and (epoch + 1) == config.epochs:
                 utils.visualize(net, imgs, epoch + 1, i, config,
-                                path="/scratch/homedirs/clohk/wnet_pytorch/data/results_experiment_7classes")
+                                path="/scratch/homedirs/clohk/wnet_pytorch/data/results_tested30epochs")
     return _enc_loss, _recons_loss
 
 
@@ -103,8 +105,10 @@ def train(path_imgs, config, epochs=5):
 
     optimizer_enc = optim.Adam(net.u_enc.parameters(), lr=config.lr)
     optimizer_glob = optim.Adam(net.parameters(), lr=config.lr)
-    scheduler_enc = optim.lr_scheduler.StepLR(optimizer_enc, step_size=10, gamma=0.1)
-    scheduler_glob = optim.lr_scheduler.StepLR(optimizer_glob, step_size=10, gamma=0.1)
+    scheduler_enc = optim.lr_scheduler.StepLR(optimizer_enc, step_size=10,
+                                              gamma=0.1)
+    scheduler_glob = optim.lr_scheduler.StepLR(optimizer_glob, step_size=10,
+                                               gamma=0.1)
 
     epoch_enc_train = []
     epoch_recons_train = []
@@ -149,7 +153,7 @@ def train(path_imgs, config, epochs=5):
 
     utils.learning_curves(
         epoch_enc_train, epoch_recons_train, epoch_enc_val, epoch_recons_val,
-        path="data/plot_Eduardos_data_experiment_7classes.png")
+        path="data/plot_Eduardos_data_test_30epochs.png")
 
     #plt.plot(dice)
     #plt.savefig("/scratch/homedirs/clohk/wnet_pytorch/data/dice.png")

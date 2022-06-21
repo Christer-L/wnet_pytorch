@@ -54,6 +54,7 @@ class Test_dataset(Dataset):
 
         return torch.Tensor(x).cuda(), torch.Tensor(y).cuda()
 
+
 class Unsupervised_dataset(Dataset):
     def __init__(self, batch_size, img_size, input_img_paths):
         self.batch_size = batch_size
@@ -69,14 +70,17 @@ class Unsupervised_dataset(Dataset):
         Returns tuple (input, target) correspond to batch #idx.
         """
         i = idx * self.batch_size
-        batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
+        batch_input_img_paths = self.input_img_paths[i: i + self.batch_size]
 
         # Image tensor
         x = np.zeros((self.batch_size, 1, self.img_size, self.img_size), dtype="float32")
 
         # Load individual images and weights into batch
         for j, path in enumerate(batch_input_img_paths):
-            img = cv2.resize(io.imread(path), (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
+            img = io.imread(path)
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.resize(img, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
             img = np.array(img) / 255
+            img = (img - np.min(img)) / (np.max(img) - np.min(img))
             x[j] = np.expand_dims(img, 0)
         return torch.Tensor(x).cuda()

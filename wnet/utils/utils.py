@@ -125,18 +125,18 @@ def get_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--epochs", "-e", type=int, default=30, help="number of epochs of training"
+        "--epochs", "-e", type=int, default=50, help="number of epochs of training"
     )
     parser.add_argument(
-        "--batch_size", "-bs", type=int, default=1, help="size of the batches"
+        "--batch_size", "-bs", type=int, default=5, help="size of the batches"
     )
-    parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
+    parser.add_argument("--lr", type=float, default=0.003, help="adam: learning rate")
     parser.add_argument(
-        "--size", type=int, default=512, help="Size of the image, one number"
+        "--size", type=int, default=224, help="Size of the image, one number"
     )
     parser.add_argument("--drop_r", "-d", type=float, default=0.2, help="Dropout rate")
-    parser.add_argument("--classes", "-c", type=int, default=2, help="Number of classes in the latent space")
-    parser.add_argument("--radius", "-r", type=int, default=25, help="Radius of n-cut-loss")
+    parser.add_argument("--classes", "-c", type=int, default=10, help="Number of classes in the latent space")
+    parser.add_argument("--radius", "-r", type=int, default=5, help="Radius of n-cut-loss")
     parser.add_argument(
         "--filters",
         "-f",
@@ -157,6 +157,7 @@ def visualize_att(net, image, k, opt, path=BASE_PATH + "data/results/"):
             (image.cpu().numpy() * 255).astype(np.uint8).reshape(-1, opt.size, opt.size)
         )
         argmax = torch.argmax(mask, 1)
+
         pred, output = (
             (argmax.detach().cpu() * 255).numpy().astype(np.uint8),
             (output.detach().cpu() * 255)
@@ -176,11 +177,11 @@ def plot_images_att(imgs, pred, att, output, k, size, path):
     for j, img in enumerate(imgs):
         ax.append(fig.add_subplot(rows, columns, i + 1))
         ax[-1].set_title("Input")
-        plt.imshow(img, cmap="gray")
+        plt.imshow(img, cmap="Greys")
 
         ax.append(fig.add_subplot(rows, columns, i + 2))
         ax[-1].set_title("Mask")
-        plt.imshow(pred[j].reshape((size, size)), cmap="gray")
+        plt.imshow(pred[j].reshape((size, size)), cmap="Greys")
 
         ax.append(fig.add_subplot(rows, columns, i + 3))
         ax[-1].set_title("Attention Map")
@@ -189,7 +190,7 @@ def plot_images_att(imgs, pred, att, output, k, size, path):
 
         ax.append(fig.add_subplot(rows, columns, i + 4))
         ax[-1].set_title("Output")
-        plt.imshow(output[j].reshape((size, size)), cmap="gray")
+        plt.imshow(output[j].reshape((size, size)), cmap="Greys")
 
         i += 4
         if i >= 15:
@@ -202,9 +203,11 @@ def visualize(net, image, k, i, opt, path=BASE_PATH + "data/results/"):
     # mask = net.forward_enc(image)
     mask, output = net.forward(image)
     image = (image.cpu().numpy() * 255).astype(np.uint8).reshape(-1, opt.size, opt.size)
-    argmax = mask.argmax(dim=1)  # mask > 0.5
+    argmax = mask[:, 0,:,:] # mask.argmax(dim=1)  # mask > 0.5
+    print("------")
+    print(argmax)
     pred, output = (
-        (argmax.detach().cpu() * 255).numpy().astype(np.uint8),
+        (argmax.detach().cpu() * 20).numpy().astype(np.uint8),
         (output.detach().cpu() * 255)
         .numpy()
         .astype(np.uint8)
@@ -222,15 +225,15 @@ def plot_images(imgs, pred, output, k, nb, size, path):
     for j, img in enumerate(imgs):
         ax.append(fig.add_subplot(rows, columns, i + 1))
         ax[-1].set_title("Input")
-        plt.imshow(img, cmap="gray")
+        plt.imshow(img, cmap="Greys")
 
         ax.append(fig.add_subplot(rows, columns, i + 2))
         ax[-1].set_title("Mask")
-        plt.imshow(pred[j].reshape((size, size)), cmap="gray")
+        plt.imshow(pred[j].reshape((size, size)), cmap="seismic")
 
         ax.append(fig.add_subplot(rows, columns, i + 3))
         ax[-1].set_title("Output")
-        plt.imshow(output[j].reshape((size, size)), cmap="gray")
+        plt.imshow(output[j].reshape((size, size)), cmap="Greys")
 
         i += 3
         if i >= 15:
