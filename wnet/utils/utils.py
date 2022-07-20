@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
+#*- coding: utf-8 -*-
 
 import argparse
 import os
 import random
 import re
-
+import tifffile
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from wnet.utils import data
+
 
 BASE_PATH = "/home/clohk/wnet_pytorch/"
 
@@ -130,13 +132,21 @@ def get_args():
     parser.add_argument(
         "--batch_size", "-bs", type=int, default=5, help="size of the batches"
     )
-    parser.add_argument("--lr", type=float, default=0.003, help="adam: learning rate")
+    parser.add_argument(
+            "--lr", type=float, default=0.003, help="adam: learning rate"
+    )
     parser.add_argument(
         "--size", type=int, default=224, help="Size of the image, one number"
     )
-    parser.add_argument("--drop_r", "-d", type=float, default=0.2, help="Dropout rate")
-    parser.add_argument("--classes", "-c", type=int, default=10, help="Number of classes in the latent space")
-    parser.add_argument("--radius", "-r", type=int, default=5, help="Radius of n-cut-loss")
+    parser.add_argument(
+        "--drop_r", "-d", type=float, default=0.2, help="Dropout rate"
+    )
+    parser.add_argument(
+        "--classes", "-c", type=int, default=2, help="Number of classes (K)"
+    )
+    parser.add_argument(
+        "--radius", "-r", type=int, default=5, help="Radius of n-cut-loss"
+    )
     parser.add_argument(
         "--filters",
         "-f",
@@ -178,6 +188,7 @@ def plot_images_att(imgs, pred, att, output, k, size, path):
         ax.append(fig.add_subplot(rows, columns, i + 1))
         ax[-1].set_title("Input")
         plt.imshow(img, cmap="Greys")
+        tifffile.imwrite("/scratch/homedirs/clohk/wnet_pytorch/data/test2_img.tif", img)
 
         ax.append(fig.add_subplot(rows, columns, i + 2))
         ax[-1].set_title("Mask")
@@ -201,9 +212,14 @@ def plot_images_att(imgs, pred, att, output, k, size, path):
 
 def visualize(net, image, k, i, opt, path=BASE_PATH + "data/results/"):
     # mask = net.forward_enc(image)
+    tifffile.imwrite("/scratch/homedirs/clohk/wnet_pytorch/data/test_img.tif",
+            np.array(image[0,0,:,:].cpu()))
     mask, output = net.forward(image)
+    print("Shape o: {}".format(mask.shape))
+    print("output shape: {}".format(np.array(mask[0,:,:,:].cpu().detach().numpy().shape)))
+    tifffile.imwrite("/scratch/homedirs/clohk/wnet_pytorch/data/test_pred.tif", np.array(mask[0,:,:,:].cpu().detach().numpy()), metadata={'axes': 'ZYX'}, imagej=True)
     image = (image.cpu().numpy() * 255).astype(np.uint8).reshape(-1, opt.size, opt.size)
-    argmax = mask[:, 0,:,:] # mask.argmax(dim=1)  # mask > 0.5
+    argmax = mask.argmax(dim=1)  # mask > 0.5  mask[:, 0,:,:] # m
     print("------")
     print(argmax)
     pred, output = (
@@ -240,3 +256,97 @@ def plot_images(imgs, pred, output, k, nb, size, path):
             break
     plt.savefig(path + "/epoch_" + str(k) + "_{}_.png".format(nb))
     plt.close()
+
+
+# Images and gt must have the same names 
+def get_dice(net, img_paths, gt_dir):
+    dice_coefs = []
+    images_ = []
+    labels_ = []
+    predictions_ = []
+    reconstructions_ = []
+    
+
+    dataset = data.Test_dataset(5, 224, img_paths, gt_dir)
+
+    print(dataset)
+    print(dataset.image_paths)
+    print("creating dataset DONE")
+    for i in range(len(dataset)):
+        images, labels = dataset[i]
+        masks, reconstructions = net.forward(images)
+        masks = torch.argmax(masks, dim=1, keepdim=True)
+
+        for j, mask in enumerate(masks):
+
+            # Labels can be either 1 or 0
+            label = torch.squeeze(labels[j])
+            mask = torch.squeeze(mask)
+            label_inv = torch.abs(label - 1)
+            dice = torch.sum(
+                label[mask==1])*2.0 / (torch.sum(mask) 
+                + torch.sum(label))
+            dice_inv = torch.sum(
+                label_inv[mask==1])*2.0 / (torch.sum(mask) 
+                + torch.sum(label_inv))
+            dice_coefs.append(max(dice, dice_inv))
+
+            predictions_.append(mask)
+            labels_.append(label)
+            images_.append(images[j])
+            reconstructions_.append(reconstructions[j])
+
+    print(torch.max(predictions_[0]))
+    print("MIN: {}".format(torch.min(predictions_[0])))
+    dice_mean = torch.mean(torch.Tensor(dice_coefs))    
+    print("DICE: {}".format(dice_coefs))
+    return dice_mean, images_, predictions_, labels_, reconstructions_     
+        
+
+# Test models with 2 classes (K=2)
+def test_model(net, img_paths, gt_dir, out_dir):
+    dice_mean, images_, predictions_, labels_, reconstructions_ = get_dice(
+            net,
+            img_paths,
+            gt_dir)
+
+    fig = plt.figure(figsize=(15,20))
+    rows = 5
+    columns = 4
+    ax =  []
+    i = 0
+
+
+    for j, img in enumerate(images_):
+
+        print(img.shape)
+        print(predictions_[j].shape)
+        print(labels_[j].shape)
+        print(reconstructions_[j].shape)
+
+        ax.append(fig.add_subplot(rows, columns, i + 1))
+        ax[-1].set_title("Input")
+        plt.imshow(np.array(torch.squeeze(img).cpu().detach().numpy()), cmap="Greys")
+
+        ax.append(fig.add_subplot(rows, columns, i + 2))
+        ax[-1].set_title("Mask predictions")
+        plt.imshow(np.array(predictions_[j].cpu().detach().numpy()), cmap="Greys")
+
+        ax.append(fig.add_subplot(rows, columns, i + 3))
+        ax[-1].set_title("Ground truth")
+        plt.imshow(np.array(labels_[j].cpu().detach().numpy()), cmap="Greys")
+
+        ax.append(fig.add_subplot(rows, columns, i + 4))
+        ax[-1].set_title("Reconstruction")
+        plt.imshow(np.array(torch.squeeze(reconstructions_[j]).cpu().detach().numpy()), cmap="Greys")
+        
+        i += 4
+        if i >= 20:
+            break
+
+    plt.savefig(os.path.join(out_dir, "inference_results.png"))
+    plt.close()
+    print("Mean Dice: {}".format(dice_mean))
+
+    return
+

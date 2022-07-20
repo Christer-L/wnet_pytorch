@@ -62,7 +62,7 @@ def get_weights_tensor(image, distance_map, padding_mask, region_shape, radius):
     # print("W shape: {}".format(w.shape))
 
     # Replace false weights from the padding with zeros.
-    weights= (w * padding_mask).cuda()
+    weights = (w * padding_mask).cuda()
 
     return weights
 
@@ -93,7 +93,7 @@ class NCutLossOptimized(nn.Module):
         unfold = torch.nn.Unfold(region_size, padding=self.radius)
         unflatten = torch.nn.Unflatten(1, region_size)
 
-        weights = get_weights_tensor((images*255).cuda(),
+        weights = get_weights_tensor((images * 255).cuda(),
                                      self.dist_map,
                                      self.mask,
                                      2*[2*self.radius+1],

@@ -20,7 +20,8 @@ class Test_dataset(Dataset):
         self.img_size = img_size
         self.image_paths = input_img_paths
         self.label_dir = label_dir
-        print("Nb of images and corresponding annotations in the test set: {}".format(len(input_img_paths)))
+        print("Nb of images and corresponding annotations in the test set: {}".format(
+            len(input_img_paths)))
 
     def __len__(self):
         return len(self.image_paths) // self.batch_size
@@ -38,13 +39,16 @@ class Test_dataset(Dataset):
 
         # Load individual images and weights into batch
         for j, path in enumerate(batch_img_paths):
-            img = cv2.resize(tif.imread(path), (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
+            img = io.imread(path)
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.resize(img, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
+    
             img = np.array(img) / 255
 
             # Get only file name for label and add to its dir path
             _, name = os.path.split(path)
 
-            label = cv2.resize(tif.imread(os.path.join(self.label_dir, name)),
+            label = cv2.resize(io.imread(os.path.join(self.label_dir, name)),
                                (self.img_size, self.img_size),
                                interpolation=cv2.INTER_AREA)
             label = np.array(label) / 255
