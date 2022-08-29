@@ -16,7 +16,7 @@ from glob import glob
 from wnet.models import residual_wnet, wnet, attention_wnet
 from wnet.utils import data, soft_n_cut_loss, ssim, utils
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 # Widget list for the progress bar
 widgets = [
@@ -31,10 +31,10 @@ widgets = [
 
 # TODO: Remove global paths 
 #BASE_PATH = "/scratch/homedirs/clohk/Data_Eduardo/cell/patched/" 
-BASE_PATH = "/home/clohk/JB/new_images/patches_tries/"
-SAVE_PATH = "saved_models/net_epoch{}_Enc{}_Rec{}_Dice{}.pt"
-TRAIN_PATH = "/scratch/homedirs/clohk/wnet_pytorch/data/JB1_train"
-VAL_PATH = "/scratch/homedirs/clohk/wnet_pytorch/data/JB1_val"
+BASE_PATH = "/home/clohk/nuc_projection_focus/"
+SAVE_PATH = "saved_models_Arthur/net_epoch{}_Enc{}_Rec{}_Dice{}.pt"
+TRAIN_PATH = "/scratch/homedirs/clohk/wnet_pytorch/data/A1_train"
+VAL_PATH = "/scratch/homedirs/clohk/wnet_pytorch/data/A1_val"
 
 #GT_DIR_TEST = "/scratch/homedirs/clohk/Data_Eduardo/cell/test_set/Labels/" 
 #IMG_PATHS_TEST = glob("/scratch/homedirs/clohk/Data_Eduardo/cell/test_set/Images/*")
