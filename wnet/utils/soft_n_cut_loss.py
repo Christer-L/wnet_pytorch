@@ -27,16 +27,16 @@ def get_distance_sq(p1, p2):
     return np.dot(dif.T, dif)
 
 
-def generate_distance_map(r):
+def generate_distance_map(r, sigma_X):
     distance_map = torch.zeros(2*[2*r+1])
     for x in range(distance_map.shape[0]):
         for y in range(distance_map.shape[1]):
-            distance_map[x, y] = -get_distance_sq(np.array([x, y]), np.array([r, r])) / SIGMA_X2
+            distance_map[x, y] = -get_distance_sq(np.array([x, y]), np.array([r, r])) / sigma_X**2
     distance_map = torch.exp(distance_map)
     return distance_map
 
 
-def get_weights_tensor(image, distance_map, padding_mask, region_shape, radius):
+def get_weights_tensor(image, distance_map, padding_mask, region_shape, radius, sigma_X, sigma_I):
 
     # Create a region matrix (height, width) for each pixel in the input image I and stack them into a tensor.
     # Each pixel in the image corresponds to a single matrix with given pixel in the center.
@@ -56,7 +56,7 @@ def get_weights_tensor(image, distance_map, padding_mask, region_shape, radius):
 
     # Calculate the weight for each pixel in the region tensor with respect to the center pixel in its slice.
     w = torch.mul(distance_map,
-                  torch.exp(-torch.pow((regions - i_f), 2) / SIGMA_I2)).cuda()
+                  torch.exp(-torch.pow((regions - i_f), 2) / sigma_I**2)).cuda()
 
     # w = torch.mul(w, torch.exp(-torch.pow((gaussian_tensor - g_f), 2) / SIGMA_I2))
     # print("W shape: {}".format(w.shape))
@@ -71,15 +71,18 @@ class NCutLossOptimized(nn.Module):
     r"""Implementation of the continuous N-Cut loss, as in:
     'W-Net: A Deep Model for Fully Unsupervised Image Segmentation', by Xia, Kulis (2017)"""
 
-    def __init__(self, radius: int = 5, image_shape: tuple = (224, 224)):
+    def __init__(self, radius: int = 5, sigma_X = 10, sigma_I = 4, image_shape: tuple = (224, 224)):
         super(NCutLossOptimized, self).__init__()
         self.radius = radius
         self.image_shape = image_shape
-        self.dist_map = generate_distance_map(radius).cuda()
+        self.dist_map = generate_distance_map(radius, sigma_X).cuda()
         self.mask = get_regions_for_weights(torch.ones(image_shape)[None, None,
                                                                     :,
                                                                     :].cuda(),
                                                 2*[2*radius+1],radius).cuda()
+        self.sigma_I = sigma_I
+        self.sigma_X = sigma_X
+
     def forward(self, images: Tensor, labels: Tensor) -> Tensor:
         r"""Computes the continuous N-Cut loss, given a set of class probabilities (labels) and image weights (weights).
         :param images: ...
@@ -97,7 +100,9 @@ class NCutLossOptimized(nn.Module):
                                      self.dist_map,
                                      self.mask,
                                      2*[2*self.radius+1],
-                                     self.radius)
+                                     self.radius,
+                                     self.sigma_I,
+                                     self.sigma_X)
 
         for k in range(num_classes):
             class_probs = labels[:, k].unsqueeze(1).cuda()
